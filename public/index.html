@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="tr" data-tema="aydinlik">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fiyat Karşılaştırıcı</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="kabuk">
+    <div class="ust-bar">
+      <button class="logo" id="logoDugmesi">Fiyat Karşılaştırıcı</button>
+      <div class="tema-secici" id="temaSecici" role="group" aria-label="Tema seçimi"></div>
+    </div>
+
+    <section id="anaSayfa" class="giris">
+      <h2>Aradığın ürünün en ucuz fiyatını bul</h2>
+      <p>Türkiye'deki mağazalarda arar, yapay zekâ ile aksesuar ve taklitleri eler, ucuzdan pahalıya sıralar.</p>
+
+      <form class="arama-formu" id="anaForm">
+        <input type="text" id="anaInput" placeholder="Örn. airpods pro" aria-label="Ürün adı">
+        <button type="submit">Ara</button>
+      </form>
+
+      <div class="kategoriler">
+        <h3>Popüler aramalar</h3>
+        <div class="kategori-listesi" id="kategoriListesi"></div>
+      </div>
+    </section>
+
+    <section id="sonucSayfasi" class="gizli">
+      <form class="arama-formu" id="sonucForm">
+        <input type="text" id="sonucInput" aria-label="Ürün adı">
+        <button type="submit">Ara</button>
+      </form>
+
+      <div class="sonuc-basligi">
+        <h2 id="sonucBaslik"></h2>
+        <span id="sonucSayisi"></span>
+      </div>
+
+      <div id="filtrePaneli"></div>
+      <div id="karsilastirmaAlani"></div>
+      <div id="durumAlani"></div>
+      <ul class="kart-izgara" id="kartIzgara"></ul>
+    </section>
+
+    <section id="detaySayfasi" class="gizli">
+      <button type="button" class="geri-dugme" id="geriDugmesi">← Sonuçlara dön</button>
+      <div id="detayIcerik"></div>
+    </section>
+  </div>
+
+  <script src="js/tema.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/bilesenler.js"></script>
+  <script src="js/arama.js"></script>
+</body>
+</html>
