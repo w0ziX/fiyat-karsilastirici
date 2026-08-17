@@ -10,7 +10,7 @@ function kacisliMetin(metin) {
   return kutu.innerHTML;
 }
 
-function urunKarti(urun, enUcuzMu, secili) {
+function urunKarti(urun, enUcuzMu, secili, sira) {
   const gorsel = urun.gorsel
     ? `<img src="${kacisliMetin(urun.gorsel)}" alt="">`
     : `<div class="gorsel-yok">Görsel yok</div>`;
@@ -35,7 +35,7 @@ function urunKarti(urun, enUcuzMu, secili) {
     : "";
 
   return `
-    <li class="kart ${enUcuzMu ? "en-ucuz" : ""}">
+    <li class="kart ${enUcuzMu ? "en-ucuz" : ""}" style="--sira:${Math.min(sira ?? 0, 11)}">
       <div class="kart-gorsel">${gorsel}</div>
       <div class="rozetler">${rozetler.join("")}</div>
       <h3 class="kart-baslik">${kacisliMetin(urun.baslik)}</h3>
@@ -66,7 +66,7 @@ function teklifTablosu(teklifler) {
           : "";
 
       return `
-        <tr class="${sira === 0 ? "teklif-en-ucuz" : ""}">
+        <tr class="${sira === 0 ? "teklif-en-ucuz" : ""}" style="--sira:${sira}">
           <td>${logo}${kacisliMetin(t.magaza)}${sira === 0 ? ' <span class="rozet rozet-ucuz">En ucuz</span>' : ""}</td>
           <td class="teklif-fiyat">${eski}${paraBicimi.format(t.fiyat)}</td>
           <td class="teklif-kargo">${kacisliMetin(t.kargo || "—")}</td>
@@ -144,8 +144,9 @@ function karsilastirmaTablosu(urunler) {
     })
     .join("");
 
+  let satirSirasi = 0;
   const satir = (etiket, hucreler) =>
-    `<tr><th scope="row">${etiket}</th>${hucreler.join("")}</tr>`;
+    `<tr style="--sira:${satirSirasi++}"><th scope="row">${etiket}</th>${hucreler.join("")}</tr>`;
 
   return `
     <div class="tablo-sarmal">
@@ -182,18 +183,28 @@ function filtrePaneli(urunler, secili) {
   const enAz = Math.floor(Math.min(...fiyatlar));
   const enCok = Math.ceil(Math.max(...fiyatlar));
 
-  const siralamaSecenekleri = SIRALAMA_SECENEKLERI.map((s) => {
-    const isaret = s.id === secili.siralama ? " selected" : "";
-    return `<option value="${s.id}"${isaret}>${s.ad}</option>`;
+  const secimAdi =
+    (SIRALAMA_SECENEKLERI.find((s) => s.id === secili.siralama) || SIRALAMA_SECENEKLERI[0]).ad;
+
+  const siralamaSecenekleri = SIRALAMA_SECENEKLERI.map((s, sira) => {
+    const secilimi = s.id === secili.siralama;
+    return `<li role="option" id="siralama-${s.id}" data-deger="${s.id}" aria-selected="${secilimi}" style="--sira:${sira}">${s.ad}</li>`;
   }).join("");
 
+  const sayimlar = urunler.reduce((toplam, u) => {
+    toplam[u.magaza] = (toplam[u.magaza] || 0) + 1;
+    return toplam;
+  }, {});
+
   const magazaKutulari = magazalar
-    .map((magaza) => {
+    .map((magaza, sira) => {
       const isaret = secili.magazalar.has(magaza) ? " checked" : "";
       return `
-        <label class="magaza-kutu">
+        <label class="magaza-cip" style="--sira:${sira}">
           <input type="checkbox" data-magaza="${kacisliMetin(magaza)}"${isaret}>
-          ${kacisliMetin(magaza)}
+          <span class="cip-isaret" aria-hidden="true"></span>
+          <span class="cip-ad">${kacisliMetin(magaza)}</span>
+          <span class="cip-sayi">${sayimlar[magaza]}</span>
         </label>
       `;
     })
@@ -202,10 +213,18 @@ function filtrePaneli(urunler, secili) {
   return `
     <div class="filtre-paneli">
       <div class="filtre-satir">
-        <label class="filtre-alan">
-          <span>Sırala</span>
-          <select id="siralamaSecimi">${siralamaSecenekleri}</select>
-        </label>
+        <div class="filtre-alan">
+          <span id="siralamaEtiketi">Sırala</span>
+          <div class="acilir" id="siralamaAcilir">
+            <button type="button" class="acilir-tetik" id="siralamaTetik"
+              aria-haspopup="listbox" aria-expanded="false" aria-labelledby="siralamaEtiketi siralamaTetik">
+              <span id="siralamaSecim">${kacisliMetin(secimAdi)}</span>
+              <span class="acilir-ok" aria-hidden="true">▾</span>
+            </button>
+            <ul class="acilir-liste" id="siralamaListe" role="listbox"
+              aria-labelledby="siralamaEtiketi" tabindex="-1">${siralamaSecenekleri}</ul>
+          </div>
+        </div>
 
         <label class="filtre-alan">
           <span>En az (TL)</span>

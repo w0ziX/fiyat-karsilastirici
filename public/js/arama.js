@@ -89,13 +89,34 @@ function sonuclariCiz() {
       ? `${tumUrunler.length} sonuç`
       : `${tumUrunler.length} sonuçtan ${gosterilenler.length} tanesi gösteriliyor`;
 
-  kartIzgara.innerHTML = gosterilenler
-    .map((urun) =>
-      urunKarti(urun, urun.fiyat === enDusukFiyat, karsilastirilanlar.has(urun.id))
+  const yeniIcerik = gosterilenler
+    .map((urun, sira) =>
+      urunKarti(urun, urun.fiyat === enDusukFiyat, karsilastirilanlar.has(urun.id), sira)
     )
     .join("");
 
+  izgarayiDegistir(yeniIcerik);
   karsilastirmayiCiz();
+}
+
+function hareketAzaltilmis() {
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
+function izgarayiDegistir(yeniIcerik) {
+  const doluydu = kartIzgara.children.length > 0;
+
+  if (!doluydu || hareketAzaltilmis()) {
+    kartIzgara.innerHTML = yeniIcerik;
+    return;
+  }
+
+  kartIzgara.classList.add("cikiyor");
+
+  window.setTimeout(() => {
+    kartIzgara.innerHTML = yeniIcerik;
+    kartIzgara.classList.remove("cikiyor");
+  }, 130);
 }
 
 function karsilastirmayiCiz() {
@@ -180,6 +201,8 @@ kartIzgara.addEventListener("change", (olay) => {
   const kutu = olay.target.closest("[data-karsilastir]");
   if (!kutu) return;
 
+  kutuyuCanlandir(kutu);
+
   if (kutu.checked) {
     karsilastirilanlar.add(kutu.dataset.karsilastir);
   } else {
@@ -210,23 +233,40 @@ function sayiyaCevirVeyaNull(deger) {
   return Number.isNaN(sayi) ? null : sayi;
 }
 
+function kutuyuCanlandir(kutu) {
+  if (hareketAzaltilmis()) return;
+
+  const etiket = kutu.closest("label");
+  if (!etiket) return;
+
+  const cip = etiket.classList.contains("magaza-cip");
+  const zipla = cip ? etiket : kutu;
+
+  zipla.classList.remove("kutu-pop");
+  etiket.classList.remove("kutu-halka");
+  void zipla.offsetWidth;
+
+  zipla.classList.add("kutu-pop");
+  if (kutu.checked && !cip) etiket.classList.add("kutu-halka");
+}
+
 filtrePaneliAlani.addEventListener("change", (olay) => {
   const hedef = olay.target;
 
-  if (hedef.id === "siralamaSecimi") {
-    filtreler.siralama = hedef.value;
-  } else if (hedef.id === "minFiyat") {
+  if (hedef.id === "minFiyat") {
     filtreler.minFiyat = sayiyaCevirVeyaNull(hedef.value);
   } else if (hedef.id === "maxFiyat") {
     filtreler.maxFiyat = sayiyaCevirVeyaNull(hedef.value);
   } else if (hedef.id === "sadeceIndirim") {
     filtreler.sadeceIndirim = hedef.checked;
+    kutuyuCanlandir(hedef);
   } else if (hedef.dataset.magaza) {
     if (hedef.checked) {
       filtreler.magazalar.add(hedef.dataset.magaza);
     } else {
       filtreler.magazalar.delete(hedef.dataset.magaza);
     }
+    kutuyuCanlandir(hedef);
   } else {
     return;
   }
@@ -234,12 +274,105 @@ filtrePaneliAlani.addEventListener("change", (olay) => {
   sonuclariCiz();
 });
 
+function acilirKapat() {
+  const acilir = document.getElementById("siralamaAcilir");
+  if (!acilir || !acilir.classList.contains("acik")) return;
+
+  acilir.classList.remove("acik");
+  document.getElementById("siralamaTetik").setAttribute("aria-expanded", "false");
+  acilir.querySelectorAll("li").forEach((li) => li.classList.remove("vurgulu"));
+}
+
+function acilirAc() {
+  const acilir = document.getElementById("siralamaAcilir");
+  if (!acilir) return;
+
+  acilir.classList.add("acik");
+  document.getElementById("siralamaTetik").setAttribute("aria-expanded", "true");
+
+  const secili = acilir.querySelector('li[aria-selected="true"]');
+  if (secili) secili.classList.add("vurgulu");
+}
+
+function siralamayiSec(deger) {
+  filtreler.siralama = deger;
+
+  const secim = SIRALAMA_SECENEKLERI.find((s) => s.id === deger);
+  document.getElementById("siralamaSecim").textContent = secim ? secim.ad : deger;
+
+  document.querySelectorAll("#siralamaListe li").forEach((li) => {
+    li.setAttribute("aria-selected", li.dataset.deger === deger);
+  });
+
+  acilirKapat();
+  document.getElementById("siralamaTetik").focus();
+  sonuclariCiz();
+}
+
+function vurguyuTasi(yon) {
+  const secenekler = [...document.querySelectorAll("#siralamaListe li")];
+  if (secenekler.length === 0) return;
+
+  const suanki = secenekler.findIndex((li) => li.classList.contains("vurgulu"));
+  const yeni = (suanki + yon + secenekler.length) % secenekler.length;
+
+  secenekler.forEach((li) => li.classList.remove("vurgulu"));
+  secenekler[yeni].classList.add("vurgulu");
+  secenekler[yeni].scrollIntoView({ block: "nearest" });
+}
+
 filtrePaneliAlani.addEventListener("click", (olay) => {
+  const secenek = olay.target.closest("#siralamaListe li");
+  if (secenek) {
+    siralamayiSec(secenek.dataset.deger);
+    return;
+  }
+
+  if (olay.target.closest("#siralamaTetik")) {
+    const acilir = document.getElementById("siralamaAcilir");
+    acilir.classList.contains("acik") ? acilirKapat() : acilirAc();
+    return;
+  }
+
   if (olay.target.id !== "filtreTemizle") return;
 
   filtreler = varsayilanFiltreler();
   filtrePaneliniCiz();
   sonuclariCiz();
+
+  const panel = filtrePaneliAlani.querySelector(".filtre-paneli");
+  if (panel && !hareketAzaltilmis()) {
+    panel.classList.add("sifirlaniyor");
+    window.setTimeout(() => panel.classList.remove("sifirlaniyor"), 420);
+  }
+});
+
+filtrePaneliAlani.addEventListener("keydown", (olay) => {
+  const acilir = document.getElementById("siralamaAcilir");
+  if (!acilir || !acilir.contains(olay.target)) return;
+
+  const acikMi = acilir.classList.contains("acik");
+
+  if (olay.key === "Escape" && acikMi) {
+    olay.preventDefault();
+    acilirKapat();
+    document.getElementById("siralamaTetik").focus();
+  } else if (olay.key === "ArrowDown" || olay.key === "ArrowUp") {
+    olay.preventDefault();
+    if (!acikMi) {
+      acilirAc();
+    } else {
+      vurguyuTasi(olay.key === "ArrowDown" ? 1 : -1);
+    }
+  } else if ((olay.key === "Enter" || olay.key === " ") && acikMi) {
+    olay.preventDefault();
+    const vurgulu = acilir.querySelector("li.vurgulu");
+    if (vurgulu) siralamayiSec(vurgulu.dataset.deger);
+  }
+});
+
+document.addEventListener("click", (olay) => {
+  if (!olay.target.closest("#siralamaAcilir")) acilirKapat();
 });
 
 function anaSayfayiGoster() {
